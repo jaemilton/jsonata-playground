@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSONata Playground</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/theme/dracula.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/brace-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/hint/show-hint.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/hint/show-hint.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/fold/foldgutter.min.css" />
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- header --- */
+        header {
+            background: #181825;
+            border-bottom: 1px solid #313244;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-docs img {
+            display: block;
+            width: 28px;
+            height: 28px;
+            opacity: 0.7;
+            transition: opacity 0.15s;
+        }
+
+        .header-docs:hover img {
+            opacity: 1;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #cba6f7;
+            letter-spacing: 0.5px;
+        }
+
+        header span {
+            font-size: 0.8rem;
+            color: #a6adc8;
+        }
+
+        /* --- Main layout --- */
+        .playground {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 0px;
+            background: #313244;
+        }
+
+        /* --- Left panel --- */
+        .panel-left {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            background: #1e1e2e;
+            min-width: 200px;
+        }
+
+        /* --- Vertical divider between left and right --- */
+        .divider-vertical {
+            width: 6px;
+            background: #313244;
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background 0.15s;
+            user-select: none;
+        }
+
+        .divider-vertical:hover { background: #45475a; }
+        .divider-vertical.active { background: #a6e3a1; }
+
+        /* --- Right panel --- */
+        .panel-right {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            background: #1e1e2e;
+            min-width: 200px;
+        }
+
+        /* --- Panel sections --- */
+        .panel-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        /* --- Horizontal divider between expression and result --- */
+        .divider-horizontal {
+            height: 6px;
+            background: #313244;
+            cursor: row-resize;
+            flex-shrink: 0;
+            transition: background 0.15s;
+            user-select: none;
+        }
+
+        .divider-horizontal:hover { background: #45475a; }
+        .divider-horizontal.active { background: #a6e3a1; }
+
+        .panel-section + .panel-section {
+            border-top: 1px solid #313244;
+        }
+
+        .panel-header {
+            background: #181825;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            border-bottom: 1px solid #313244;
+        }
+
+        .panel-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #a6adc8;
+        }
+
+        /* --- status badge in result panel --- */
+        #status-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 600;
+            display: none;
+        }
+
+        #status-badge.ok { background: #a6e3a1; color: #1e1e2e; display: inline-block; }
+        #status-badge.err { background: #f38ba8; color: #1e1e2e; display: inline-block; }
+
+        /* Format button */
+        .btn {
+            font-size: 0.72rem;
+            padding: 3px 10px;
+            border-radius: 5px;
+            border: 1px solid #45475a;
+            background: #313244;
+            color: #cdd6f4;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.15s;
+        }
+
+        .btn:hover { background: #45475a; }
+        .btn:active { background: #585b70; }
+
+        /* CodeMirror wrapper fills remaining space */
+        .editor-wrap {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-wrap .CodeMirror {
+            flex: 1;
+            height: 100%;
+            font-size: 13.5px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            background: #1e1e2e;
+        }
+
+        .editor-wrap .CodeMirror-scroll {
+            height: 100%;
+        }
+
+        /* Result panel uses a <pre> */
+        .result-wrap {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .result-wrap .CodeMirror {
+            flex: 1;
+            height: 100%;
+        }
+
+        #result-output {
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 13.5px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #a6e3a1;
+            line-height: 1.6;
+        }
+
+        #result-output.error { color: #f38ba8; }
+
+        /* divider between right panels */
+        .panel-divider {
+            height: 1px;
+            background: #313244;
+            flex-shrink: 0;
+        }
+
+        .CodeMirror-hints {
+            background: #2a2a3a;
+            border: 1px solid #45475a;
+            color: #cdd6f4;
+        }
+
+        .CodeMirror-hint-active {
+            background: #45475a;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <h1>JSONata Playground</h1>
+        <span>Evaluate JSONata expressions against JSON data</span>
+    </div>
+    <a href="https://docs.jsonata.org/overview.html" target="_blank" class="header-docs" title="Open JSONata Documentation">
+        <img alt="Documentation" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAA3QAAAN0BcFOiBwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAOcSURBVFiF7ZZfaJZVGMB/Z7XKls0/renU0aggsujGovLG6SyIFl2MUXhRRBF0010YIXUVrOg+6aIgyCEZJSJFZEShWQaOSJlSaphb1tawbU039+vinG+9e/e+3/cJUTc+8PF93znn9/w7z3nOgctyWf5nCWUT6mrgZuBG4HfgpxDCqXqUqrcCNwHNwDBwLIRwth6wQX1K/dZiOaw+pzYWsIvUreqxAu6i+oXaoxYHrXaoh0oM5+WIemeGvVc9WSf7uboyb/w29Wxm0cfqo2pLmm9Ru9UPM2vG1U71IXUqE+m76ia1WQ1qm7pF3Z9hT6sdFeNtGe/H1d4a2/Sg+ltm/WT6/Yt6fxUuqM+of6X1x9VW1D1pYFLdUM14Rtld6h+ZiIaMhVcP261OJ253UC8CDcDWEEJfWrQS6AQ6gOXAOPAr8A3wXQhhVn0E+Cjp7Q4h7ElsO7ABaAeWAX8ST8IBYCCEoPoi8CowSyaKXnWZuledtVxOpijWZsbWpq3cV4VTHTTWTW9l4MpsekIIo+o4MAC8D3wPjADXA6uALmAzcBy4IpfdYWAaOAh8ABwFRom9oB14AFgP/Ai0ZPdkLgPp/9WWndU4f036npeBClvGZedLM5DkArBO7QLWADcAkynCg8BnwFSJjWnjSdiY2KXABDBErIF9wPksMM8BdQnwKbCuSiDn1GeJ25Nl24BPgDuqsCPqk6UOhBDG1K+JFb8zGRkDrk0RbQIeBr4i7m2WPaMeBgaBXcAR4BzQRLwXNhMzcyDpmfN8Xg3UK0U1cAlseQ2kQulOXq4hVuwE/9TA7hDCiRLFTYndSDw1LcQsDAP7E3s6D81lQF2inqhxlqfVp/MZMPaBoRrseeONWNoHxtTtxHO7E/iB+Ba4jriPncQa2AW05dgz6tvAojR/NIQwojYTO2pXyszepGNhBko3rTjd/0oNNNRY2GBsz/muV4+RRnVprXULHFBvUfvUQWLTGAGmjNfnG+rtVYzerb6p/kxsVqPGt8KA+oq6qgiqyBb1dfVCjUKaSUbuyYytV3dY/RJTnVC3qY9XBoJq8mWUeH2Sou4Hvky/lwP3AY8BrWnNMLCigD0FvAccIl7FK4jF2wMsXsAWeLndWLlF2WpSXyuJdEZ9Sb2qhG1V+/NQ3oFtZfubU/ZEzokZtadOti/vwA51WH2rHgUZRS9k9Dx/CVxQ3zG+K/uzE0VXcy1FL6dP6fuhhG20Rgv4z+RvCtgtr73fkycAAAAASUVORK5CYII=">
+    </a>
+</header>
+
+<div class="playground">
+    <div class="panel-left">
+        <div class="panel-section">
+            <div class="panel-header">
+                <span class="panel-label">JSON Input</span>
+                <button class="btn" id="btn-format" title="Format JSON (Ctrl+Shift+F)">Format JSON</button>
+            </div>
+            <div class="editor-wrap">
+                <textarea id="json-input"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="divider-vertical" id="divider-v"></div>
+
+    <div class="panel-right">
+        <div class="panel-section">
+            <div class="panel-header">
+                <span class="panel-label">JSONata Expression</span>
+            </div>
+            <div class="editor-wrap">
+                <textarea id="expr-input"></textarea>
+            </div>
+        </div>
+
+        <div class="divider-horizontal" id="divider-h"></div>
+
+        <div class="panel-section">
+            <div class="panel-header">
+                <span class="panel-label">Result</span>
+                <span id="status-badge"></span>
+            </div>
+            <div class="result-wrap">
+                <textarea id="result-output"></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* --- Default sample data --- */
+    const defaultJson = JSON.stringify({
+        "name": "Alice",
+        "age": 30,
+        "orders": [
+            { "id": 1, "product": "Widget", "qty": 3 },
+            { "id": 2, "product": "Gadget", "qty": 1 }
+        ]
+    }, null, 2);
+
+    const defaultExpr = "$";
+
+    /* --- CodeMirror instances --- */
+    const jsonEditor = CodeMirror.fromTextArea(document.getElementById("json-input"), {
+        mode: { name: "javascript", json: true },
+        theme: "dracula",
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        indentUnit: 2,
+        tabSize: 2,
+        lineWrapping: true,
+        foldGutter: true,
+        gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+        extraKeys: {
+            "Ctrl-Shift-F": formatJson,
+            "Cmd-Shift-F": formatJson
+        }
+    });
+
+    const exprEditor = CodeMirror.fromTextArea(document.getElementById("expr-input"), {
+        mode: "javascript",
+        theme: "dracula",
+        lineNumbers: false,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        lineWrapping: true,
+        indentUnit: 2,
+        extraKeys: {
+            "Ctrl-Space": "autocomplete"
+        },
+        hintOptions: {
+            hint: jsonataHint
+        }
+    });
+
+    const resultViewer = CodeMirror.fromTextArea(document.getElementById("result-output"), {
+        mode: { name: "javascript", json: true },
+        theme: "dracula",
+        lineNumbers: true,
+        readOnly: true,
+        lineWrapping: true,
+        foldGutter: true,
+        gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+    });
+
+    /* Set initial values */
+    const savedJson = localStorage.getItem("json_input");
+    const savedExpr = localStorage.getItem("expression");
+
+    jsonEditor.setValue(savedJson || defaultJson);
+    exprEditor.setValue(savedExpr || defaultExpr);
+
+    /* --- JSONata function list for autocomplete --- */
+    const jsonataFunctions = [
+        "$abs", "$append", "$assert", "$average", "$base64decode", "$base64encode", "$boolean", "$ceil",
+        "$contains", "$count", "$decodeUrl", "$decodeUrlComponent", "$distinct", "$each", "$encodeUrl",
+        "$encodeUrlComponent", "$entries", "$error", "$eval", "$exists", "$filter", "$floor", "$flow",
+        "$formatBase", "$formatInteger", "$formatNumber", "$fromMillis", "$join", "$keys", "$length",
+        "$lookup", "$lowercase", "$map", "$max", "$merge", "$min", "$millis", "$now", "$number",
+        "$pad", "$parseInteger", "$partition", "$power", "$random", "$reduce", "$replace", "$reverse",
+        "$round", "$shuffle", "$sift", "$single", "$sort", "$split", "$sqrt", "$string", "$substring",
+        "$substringAfter", "$substringBefore", "$sum", "$toMillis", "$trim", "$type", "$uppercase",
+        "$zip"
+    ];
+
+    function jsonataHint(editor) {
+        const cursor = editor.getCursor();
+        const token = editor.getTokenAt(cursor);
+        const start = token.start;
+        const end = cursor.ch;
+        const line = cursor.line;
+        const currentWord = token.string;
+
+        const list = jsonataFunctions.filter(f => f.startsWith(currentWord));
+
+        return {
+            list: list.length ? list : [],
+            from: CodeMirror.Pos(line, start),
+            to: CodeMirror.Pos(line, end)
+        };
+    }
+
+    /* --- Debounced evaluation --- */
+    let debounceTimer = null;
+    function scheduleEvaluate() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(evaluate, 300);
+    }
+
+    jsonEditor.on("change", scheduleEvaluate);
+    exprEditor.on("change", scheduleEvaluate);
+
+    /* --- Evaluate --- */
+    async function evaluate() {
+        const json_input = jsonEditor.getValue();
+        const expression = exprEditor.getValue();
+
+        // Save to localStorage
+        localStorage.setItem("json_input", json_input);
+        localStorage.setItem("expression", expression);
+
+        try {
+            const resp = await fetch("/evaluate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ json_input, expression })
+            });
+            const data = await resp.json();
+
+            const badge = document.getElementById("status-badge");
+
+            if (data.error) {
+                resultViewer.setValue(data.error);
+                resultViewer.setOption("theme", "dracula error-theme"); // A custom theme/class could be better
+                badge.textContent = "Error";
+                badge.className = "err";
+            } else {
+                const pretty = (data.result_text === undefined || data.result_text === null)
+                    ? "null"
+                    : data.result_text;
+                
+                resultViewer.setValue(pretty);
+                resultViewer.setOption("theme", "dracula");
+                badge.textContent = "OK";
+                badge.className = "ok";
+            }
+        } catch (err) {
+            resultViewer.setValue("Network error: " + err.message);
+        }
+    }
+
+    /* --- Format JSON --- */
+    function formatJson() {
+        try {
+            const parsed = JSON.parse(jsonEditor.getValue());
+            jsonEditor.setValue(JSON.stringify(parsed, null, 2));
+        } catch (e) {
+            /* invalid JSON - do nothing, let evaluation surface the error */
+        }
+    }
+
+    document.getElementById("btn-format").addEventListener("click", formatJson);
+
+    /* --- Resizable dividers --- */
+    const dividerV = document.getElementById("divider-v");
+    const dividerH = document.getElementById("divider-h");
+    const playground = document.querySelector(".playground");
+    const panelLeft = document.querySelector(".panel-left");
+    const panelRight = document.querySelector(".panel-right");
+
+    let isResizingV = false;
+    let isResizingH = false;
+
+    /* Vertical divider (left/right split) */
+    dividerV.addEventListener("mousedown", () => {
+        isResizingV = true;
+        dividerV.classList.add("active");
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+    });
+
+    /* Horizontal divider (expression/result split) */
+    dividerH.addEventListener("mousedown", () => {
+        isResizingH = true;
+        dividerH.classList.add("active");
+        document.body.style.cursor = "row-resize";
+        document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (isResizingV) {
+            const rect = playground.getBoundingClientRect();
+            const newLeftWidth = e.clientX - rect.left;
+            const minWidth = 200;
+            const maxWidth = rect.width - 200;
+
+            if (newLeftWidth >= minWidth && newLeftWidth <= maxWidth) {
+                panelLeft.style.flex = `0 0 ${newLeftWidth}px`;
+                panelRight.style.flex = "1 1 auto";
+                jsonEditor.refresh();
+                exprEditor.refresh();
+            }
+        }
+
+        if (isResizingH) {
+            const sections = panelRight.querySelectorAll(".panel-section");
+            const rect = panelRight.getBoundingClientRect();
+            const newExprHeight = e.clientY - sections[0].getBoundingClientRect().top;
+            const minHeight = 100;
+            const maxHeight = rect.height - 100;
+
+            if (newExprHeight >= minHeight && newExprHeight <= maxHeight) {
+                sections[0].style.flex = `0 0 ${newExprHeight}px`;
+                sections[1].style.flex = "1 1 auto";
+                jsonEditor.refresh();
+                exprEditor.refresh();
+                resultViewer.refresh();
+            }
+        }
+    });
+
+    document.addEventListener("mouseup", () => {
+        isResizingV = false;
+        isResizingH = false;
+        dividerV.classList.remove("active");
+        dividerH.classList.remove("active");
+        document.body.style.cursor = "default";
+        document.body.style.userSelect = "auto";
+    });
+
+    /* --- Initial evaluation --- */
+    evaluate();
+</script>
+</body>
+</html>
