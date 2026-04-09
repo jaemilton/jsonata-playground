@@ -6,6 +6,10 @@ import simplejson
 
 app = Flask(__name__)
 
+@app.route("/lib/<path:filename>")
+def lib_files(filename):
+    return send_from_directory("lib", filename)
+
 @app.route("/")
 def index():
     return render_template("index.html")
